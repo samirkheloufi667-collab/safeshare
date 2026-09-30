@@ -1,0 +1,159 @@
+// Modèle de données de SafeShare.
+// Une arborescence de dossiers par propriétaire ; des partages nominatifs
+// (hérités par tout le contenu d'un dossier) ; des liens publics temporaires ;
+// un journal de chaque action sensible.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ShareRole {
+  VIEWER // consulter et télécharger
+  EDITOR // + importer, créer, renommer, déplacer, supprimer
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  /// Espace de stockage autorisé, en octets.
+  quotaBytes   BigInt   @default(1073741824)
+  createdAt    DateTime @default(now())
+
+  folders       Folder[]
+  files         File[]         @relation("FileOwner")
+  uploads       File[]         @relation("FileUploader")
+  shares        Share[]        @relation("ShareRecipient")
+  sharesGiven   Share[]        @relation("ShareGrantor")
+  links         Link[]
+  activities    Activity[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  familyId  String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([familyId])
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  /// Propriétaire de toute l'arborescence : un sous-dossier créé par un éditeur
+  /// appartient au propriétaire du dossier partagé (et compte dans son quota).
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[] @relation("FolderTree")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  files  File[]
+  shares Share[]
+  links  Link[]
+
+  @@index([ownerId, parentId])
+  @@index([parentId])
+}
+
+model File {
+  id         String   @id @default(cuid())
+  name       String
+  size       BigInt
+  /// Type déterminé par le serveur à partir du contenu, pas celui annoncé par le navigateur.
+  mimeType   String
+  /// Empreinte SHA-256 du contenu : permet de vérifier l'intégrité d'un téléchargement.
+  sha256     String
+  /// Nom du fichier sur le disque (aléatoire), jamais dérivé du nom d'origine.
+  storageKey String   @unique
+  ownerId    String
+  owner      User     @relation("FileOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  uploaderId String
+  uploader   User     @relation("FileUploader", fields: [uploaderId], references: [id], onDelete: Cascade)
+  folderId   String?
+  folder     Folder?  @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  shares Share[]
+  links  Link[]
+
+  @@index([ownerId, folderId])
+  @@index([folderId])
+}
+
+/// Accès nominatif à un dossier (hérité par tout son contenu) ou à un fichier.
+model Share {
+  id          String    @id @default(cuid())
+  role        ShareRole
+  userId      String
+  user        User      @relation("ShareRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  grantedById String
+  grantedBy   User      @relation("ShareGrantor", fields: [grantedById], references: [id], onDelete: Cascade)
+  folderId    String?
+  folder      Folder?   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  fileId      String?
+  file        File?     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, folderId])
+  @@unique([userId, fileId])
+  @@index([folderId])
+  @@index([fileId])
+}
+
+/// Lien public temporaire. Seule l'empreinte du jeton est stockée.
+model Link {
+  id            String    @id @default(cuid())
+  tokenHash     String    @unique
+  /// Quatre derniers caractères du jeton, pour reconnaître un lien dans la liste.
+  tokenHint     String
+  label         String?
+  passwordHash  String?
+  expiresAt     DateTime
+  maxDownloads  Int?
+  downloadCount Int       @default(0)
+  revokedAt     DateTime?
+  createdById   String
+  createdBy     User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  folderId      String?
+  folder        Folder?   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  fileId        String?
+  file          File?     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+
+  @@index([createdById])
+  @@index([folderId])
+  @@index([fileId])
+}
+
+/// Journal d'activité : qui a fait quoi, sur quel élément, depuis quelle adresse.
+model Activity {
+  id         String   @id @default(cuid())
+  action     String
+  /// Propriétaire concerné : chacun voit l'activité qui touche ses fichiers.
+  ownerId    String
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  targetName String
+  targetType String
+  details    String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([ownerId, createdAt])
+}

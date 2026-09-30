@@ -1,0 +1,69 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource-variable/jetbrains-mono';
+
+/*
+ * Identité « coffre-fort » : graphite profond, un or chaud réservé aux actions
+ * et à la sécurité, des couleurs d'état sobres. Chiffres et empreintes en
+ * police à chasse fixe.
+ */
+@theme {
+  --color-ink: #0a0b0d;
+  --color-surface: #121418;
+  --color-surface-2: #181b21;
+  --color-surface-3: #20242c;
+  --color-line: #252932;
+  --color-line-strong: #333845;
+  --color-fg: #eceef2;
+  --color-muted: #9097a6;
+  --color-faint: #636a79;
+
+  --color-gold: #f2b544;
+  --color-gold-strong: #ffc85e;
+  --color-gold-soft: #f2b5441f;
+  --color-sky: #6ea8ff;
+  --color-ok: #4ade80;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Space Grotesk Variable', 'Inter Variable', ui-sans-serif, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, Consolas, monospace;
+}
+
+html {
+  background: var(--color-ink);
+  color: var(--color-fg);
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-sans);
+  min-height: 100svh;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
