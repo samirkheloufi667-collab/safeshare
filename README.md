@@ -7,6 +7,9 @@ nombre de téléchargements en option), et un journal de chaque accès.
 
 > Projet de portfolio full stack — React · TypeScript · Node.js · Express · PostgreSQL · JWT · Docker
 
+> **Démo en ligne : [safeshare-gws7.onrender.com](https://safeshare-gws7.onrender.com)** — compte `demo@safeshare.dev` / `safeshare2026`.
+> Hébergement gratuit : le premier chargement peut prendre environ une minute ; les données de démonstration sont réinitialisées à chaque redémarrage.
+
 ## Fonctionnalités
 
 | | |
