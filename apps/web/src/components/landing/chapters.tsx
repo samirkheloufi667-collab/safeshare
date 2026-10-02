@@ -36,26 +36,33 @@ export function LinkLocks() {
       const fmt = (s: number) => [s / 3600, (s % 3600) / 60, s % 60].map((n) => String(Math.floor(n)).padStart(2, '0')).join(':');
 
       if (prefersReducedMotion()) return;
-      const mm = gsap.matchMedia();
-      mm.add('(min-width: 1024px)', () => {
+      // Même histoire sur grand et petit écran : épinglée et pilotée par le
+      // défilement sur ordinateur, jouée d'un trait à l'entrée sur mobile.
+      const build = (desktop: boolean) => {
         const state = { seconds: 86_400, downloads: 0 };
-        gsap.set(steps.slice(1), { autoAlpha: 0.15 });
+        if (desktop) gsap.set(steps.slice(1), { autoAlpha: 0.15 });
         const tl = gsap.timeline({
-          defaults: { ease: 'none' },
-          scrollTrigger: { trigger: el, start: 'top top', end: '+=2400', pin: true, scrub: 0.6 },
+          defaults: { ease: desktop ? 'none' : 'power1.inOut' },
+          scrollTrigger: desktop
+            ? { trigger: el, start: 'top top', end: '+=2400', pin: true, scrub: 0.6 }
+            : { trigger: el.querySelector('[data-card]'), start: 'top 75%', once: true },
         });
         tl.to(state, { seconds: 0, duration: 2, onUpdate: () => (clock.textContent = fmt(state.seconds)) })
           .to('[data-lock="0"]', { color: 'var(--color-seal)', duration: 0.1 }, '<1.8')
-          .to(steps[1], { autoAlpha: 1, duration: 0.3 })
+          .to(desktop ? steps[1] : {}, { autoAlpha: 1, duration: 0.3 })
           .to('[data-dot]', { opacity: 1, stagger: 0.12, duration: 0.05 }, '<')
           .to('[data-lock="1"]', { color: 'var(--color-seal)', duration: 0.1 })
-          .to(steps[2], { autoAlpha: 1, duration: 0.3 })
+          .to(desktop ? steps[2] : {}, { autoAlpha: 1, duration: 0.3 })
           .to(state, { downloads: 3, duration: 1.2, onUpdate: () => (count.textContent = String(Math.round(state.downloads))) }, '<')
           .to('[data-lock="2"]', { color: 'var(--color-seal)', duration: 0.1 })
           .to('[data-strike]', { scaleX: 1, duration: 0.5, ease: 'power2.inOut' })
           .to('[data-broken]', { autoAlpha: 1, y: 0, duration: 0.3 }, '<0.2')
           .to({}, { duration: 0.4 });
-      });
+        if (!desktop) tl.timeScale(1.4);
+      };
+      const mm = gsap.matchMedia();
+      mm.add('(min-width: 1024px)', () => build(true));
+      mm.add('(max-width: 1023px)', () => build(false));
       return () => mm.revert();
     },
     { scope: root },
@@ -78,7 +85,7 @@ export function LinkLocks() {
         </div>
 
         <div className="self-center lg:col-span-7">
-          <div className="border border-line-strong bg-surface p-6 sm:p-8">
+          <div data-card className="border border-line-strong bg-surface p-6 sm:p-8">
             <p className="font-mono text-[11px] tracking-[0.12em] text-faint uppercase">Lien public · contrat-signé.pdf</p>
             <p className="relative mt-4 inline-block font-mono text-lg break-all text-fg sm:text-2xl">
               safeshare.app/l/7f3a…c91e
@@ -339,7 +346,7 @@ export function Colophon() {
     <section className="border-t border-line-strong">
       <div className="mx-auto grid max-w-7xl gap-10 px-5 py-24 sm:px-8 lg:grid-cols-12">
         <div className="lg:col-span-5">
-          <Kicker n="—">Colophon</Kicker>
+          <Kicker n="05">Colophon</Kicker>
           <p className="display mt-6 text-2xl leading-snug">
             Conçu et développé par{' '}
             <a href="https://samir-kheloufi.netlify.app" target="_blank" rel="noreferrer" className="u-link text-seal">
