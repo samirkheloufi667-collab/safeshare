@@ -1,16 +1,16 @@
-import { MoreHorizontal } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { cx } from '@/lib/format';
 
 export interface MenuAction {
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
   onSelect: () => void;
   danger?: boolean;
+  hint?: string;
 }
 
-/** Menu « … » d'un élément : se ferme au clic extérieur et à la touche Échap. */
-export function ItemMenu({ actions, label }: { actions: MenuAction[]; label: string }) {
+/** Menu « ⋯ » d'un élément : se ferme au clic extérieur et à la touche Échap. */
+export function ItemMenu({ actions, label, inverted }: { actions: MenuAction[]; label: string; inverted?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -29,39 +29,49 @@ export function ItemMenu({ actions, label }: { actions: MenuAction[]; label: str
 
   if (actions.length === 0) return null;
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative justify-self-end">
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           setOpen((o) => !o);
         }}
-        className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-3 hover:text-fg"
+        className={cx('flex size-8 items-center justify-center font-mono text-[15px] transition-colors', inverted ? 'text-ink hover:bg-ink/10' : 'text-muted hover:text-fg')}
         aria-label={`Actions pour ${label}`}
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <MoreHorizontal className="size-4" />
+        ⋯
       </button>
-      {open && (
-        <div role="menu" className="absolute top-full right-0 z-20 mt-1 w-52 overflow-hidden rounded-xl border border-line-strong bg-surface-2 py-1 shadow-2xl shadow-black/60">
-          {actions.map(({ label: text, icon: Icon, onSelect, danger }) => (
-            <button
-              key={text}
-              type="button"
-              role="menuitem"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpen(false);
-                onSelect();
-              }}
-              className={cx('flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm transition-colors hover:bg-surface-3', danger ? 'text-danger' : 'text-fg')}
-            >
-              <Icon className="size-4 opacity-80" /> {text}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            role="menu"
+            initial={{ opacity: 0, y: -4, clipPath: 'inset(0 0 100% 0)' }}
+            animate={{ opacity: 1, y: 0, clipPath: 'inset(0 0 0% 0)' }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute top-full right-0 z-20 mt-1 w-52 border border-line-strong bg-surface-2 py-1 text-fg"
+          >
+            {actions.map(({ label: text, onSelect, danger, hint }) => (
+              <button
+                key={text}
+                type="button"
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen(false);
+                  onSelect();
+                }}
+                className={cx('flex w-full items-center justify-between px-3.5 py-2 text-left font-mono text-[12px] transition-colors hover:bg-fg hover:text-ink', danger ? 'text-seal' : 'text-fg')}
+              >
+                {text}
+                {hint && <span className="opacity-50">{hint}</span>}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

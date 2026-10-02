@@ -1,4 +1,3 @@
-import { SearchX } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router';
 import { AppShell } from '@/components/AppShell';
@@ -20,8 +19,7 @@ function NotFound() {
   return (
     <div className="mx-auto max-w-lg px-4 py-20">
       <EmptyState
-        icon={<SearchX className="size-5" />}
-        title="Page introuvable"
+        title="Page introuvable."
         text="Cette adresse ne correspond à aucune page de SafeShare."
         action={
           <Link to="/" className={buttonClass('secondary')}>

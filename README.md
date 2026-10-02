@@ -55,7 +55,7 @@ Mot de passe commun : `safeshare2026` — la page de connexion propose des bouto
 | E-mail | Rôle dans la démo |
 |---|---|
 | `demo@safeshare.dev` | Léa, propriétaire : arborescence complète, partages et liens dans tous les états |
-| `karim@safeshare.dev` | Karim, **peut modifier** le dossier « Refonte site 2027 » de Léa |
+| `thomas@safeshare.dev` | Thomas, **peut modifier** le dossier « Refonte site 2027 » de Léa |
 | `sofia@safeshare.dev` | Sofia, **lecture seule** sur le même dossier |
 
 `npm run db:setup` affiche aussi deux liens publics prêts à tester, dont un protégé par le mot de passe `client2027`.

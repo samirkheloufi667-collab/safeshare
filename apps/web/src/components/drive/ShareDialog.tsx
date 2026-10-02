@@ -1,5 +1,7 @@
-import { Check, Copy, KeyRound, Link2, ShieldAlert, Trash2, UserPlus, Users } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useState } from 'react';
+import { Scramble } from '@/components/motion/Scramble';
+import { Seal } from '@/components/motion/Seal';
 import { Modal } from '@/components/ui/modal';
 import { Badge, Button, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
@@ -21,20 +23,21 @@ export function ShareDialog({ target, onClose, onChanged }: { target: ShareTarge
     <Modal open={target !== null} onClose={onClose} title={target ? `Partager « ${target.name} »` : ''} wide>
       {target && (
         <>
-          <div className="mb-5 inline-flex rounded-xl bg-surface-2 p-1" role="tablist">
+          <div className="mb-6 flex gap-6 border-b border-line" role="tablist">
             {[
-              { id: 'people' as const, label: 'Personnes', icon: Users },
-              { id: 'links' as const, label: 'Lien public', icon: Link2 },
-            ].map(({ id, label, icon: Icon }) => (
+              { id: 'people' as const, label: 'Personnes' },
+              { id: 'links' as const, label: 'Lien public' },
+            ].map(({ id, label }) => (
               <button
                 key={id}
                 type="button"
                 role="tab"
                 aria-selected={tab === id}
                 onClick={() => setTab(id)}
-                className={cx('flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors', tab === id ? 'bg-surface-3 text-fg' : 'text-muted hover:text-fg')}
+                className={cx('relative py-2.5 font-mono text-[12px] tracking-[0.1em] uppercase transition-colors', tab === id ? 'text-fg' : 'text-faint hover:text-muted')}
               >
-                <Icon className="size-4" /> {label}
+                {label}
+                {tab === id && <motion.span layoutId="share-tab" className="absolute inset-x-0 -bottom-px h-[2px] bg-fg" transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} />}
               </button>
             ))}
           </div>
@@ -46,6 +49,12 @@ export function ShareDialog({ target, onClose, onChanged }: { target: ShareTarge
 }
 
 const query = (t: ShareTarget) => `${t.kind === 'folder' ? 'folderId' : 'fileId'}=${t.id}`;
+const initials = (name: string) =>
+  name
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('');
 
 function PeopleTab({ target, onChanged }: { target: ShareTarget; onChanged: () => void }) {
   const toast = useToast();
@@ -105,40 +114,36 @@ function PeopleTab({ target, onChanged }: { target: ShareTarget; onChanged: () =
           <option value="VIEWER">Lecture seule</option>
           <option value="EDITOR">Peut modifier</option>
         </Select>
-        <Button type="submit" loading={pending}>
-          <UserPlus className="size-4" /> Inviter
+        <Button type="submit" loading={pending} className="h-11">
+          Inviter
         </Button>
       </form>
       {error && <ErrorNote>{error}</ErrorNote>}
-      {target.kind === 'folder' && (
-        <p className="text-[13px] text-muted">L’accès vaut pour tout le contenu du dossier, sous-dossiers compris. La personne ne voit pas les dossiers situés au-dessus.</p>
-      )}
+      {target.kind === 'folder' && <p className="text-[13px] text-muted">L’accès vaut pour tout le contenu du dossier, sous-dossiers compris. La personne ne voit pas les dossiers situés au-dessus.</p>}
 
-      <ul className="divide-y divide-line rounded-2xl border border-line">
-        {shares.data?.length === 0 && <li className="px-4 py-5 text-center text-sm text-muted">Personne d’autre n’a accès pour l’instant.</li>}
+      <ul className="border-t border-line-strong">
+        {shares.data?.length === 0 && <li className="border-b border-line py-5 font-mono text-[12px] text-faint">— personne d’autre n’a accès.</li>}
         {shares.data?.map((s) => (
-          <li key={s.id} className={cx('flex flex-wrap items-center gap-3 px-4 py-3', s.inheritedFrom && 'bg-surface-2/40')}>
-            <span className="flex size-8 items-center justify-center rounded-full bg-surface-3 text-xs font-bold text-gold">
-              {s.user.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}
-            </span>
+          <li key={s.id} className="flex flex-wrap items-center gap-3 border-b border-line py-3">
+            <span className="flex size-8 items-center justify-center border border-line-strong font-mono text-[11px] text-muted">{initials(s.user.name)}</span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{s.user.name}</p>
-              <p className="truncate text-xs text-muted">{s.user.email}</p>
+              <p className="truncate text-sm">{s.user.name}</p>
+              <p className="truncate font-mono text-[11px] text-muted">{s.user.email}</p>
             </div>
             {s.inheritedFrom ? (
-              <p className="text-right text-xs text-muted">
+              <p className="text-right">
                 <Badge color="var(--color-muted)">{s.role === 'EDITOR' ? 'Peut modifier' : 'Lecture seule'}</Badge>
-                <span className="mt-1 block">hérité de « {s.inheritedFrom.name} »</span>
+                <span className="mt-1 block font-mono text-[11px] text-faint">↳ hérité de « {s.inheritedFrom.name} »</span>
               </p>
             ) : (
               <>
-            <Select value={s.role} onChange={(e) => update(s, e.target.value as ShareRole)} className="h-9 w-40 text-sm" aria-label={`Droits de ${s.user.name}`}>
-              <option value="VIEWER">Lecture seule</option>
-              <option value="EDITOR">Peut modifier</option>
-            </Select>
-            <button type="button" onClick={() => remove(s)} className="rounded-lg p-2 text-muted hover:bg-danger/10 hover:text-danger" aria-label={`Retirer l’accès de ${s.user.name}`}>
-              <Trash2 className="size-4" />
-            </button>
+                <Select value={s.role} onChange={(e) => update(s, e.target.value as ShareRole)} className="h-9 w-40 text-[13px]" aria-label={`Droits de ${s.user.name}`}>
+                  <option value="VIEWER">Lecture seule</option>
+                  <option value="EDITOR">Peut modifier</option>
+                </Select>
+                <button type="button" onClick={() => remove(s)} className="u-link font-mono text-[11px] tracking-[0.08em] text-muted uppercase hover:text-seal" aria-label={`Retirer l’accès de ${s.user.name}`}>
+                  Retirer
+                </button>
               </>
             )}
           </li>
@@ -205,26 +210,27 @@ function LinksTab({ target, onChanged }: { target: ShareTarget; onChanged: () =>
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       {created?.url && (
-        <div className="rounded-2xl border border-gold/40 bg-gold-soft p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-gold">
-            <ShieldAlert className="size-4" /> Copiez ce lien maintenant
-          </p>
-          <p className="mt-1 text-[13px] text-muted">
-            Pour votre sécurité, SafeShare n’en garde qu’une empreinte : il ne pourra plus être affiché. En cas de perte, créez-en un nouveau.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <input readOnly value={created.url} onFocus={(e) => e.target.select()} className="min-w-0 flex-1 rounded-xl border border-line-strong bg-ink px-3 font-mono text-xs text-fg" aria-label="Lien de partage" />
-            <Button onClick={() => copy(created.url!)} variant={copied ? 'secondary' : 'primary'}>
-              {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              {copied ? 'Copié' : 'Copier'}
-            </Button>
+        // Le sceau tombe sur le lien qui vient d'être créé : il ne sera plus jamais affiché.
+        <div key={created.id} className="relative flex gap-5 border border-seal/60 p-4 pr-5">
+          <Seal size={84} stamp label="LIEN · SCELLÉ · UNE FOIS · " />
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[11px] tracking-[0.12em] text-seal uppercase">Copiez ce lien maintenant</p>
+            <p className="mt-1 text-[13px] text-muted">SafeShare n’en garde qu’une empreinte : il ne pourra plus être affiché.</p>
+            <div className="mt-3 flex gap-2">
+              <p className="min-w-0 flex-1 truncate border border-line-strong bg-ink px-3 py-2.5 font-mono text-[12px] select-all" aria-label="Lien de partage">
+                <Scramble text={created.url} duration={1.1} delay={0.5} chars="abcdefghijklmnopqrstuvwxyz0123456789-_" />
+              </p>
+              <Button onClick={() => copy(created.url!)} variant={copied ? 'secondary' : 'primary'} className="h-auto">
+                {copied ? 'Copié' : 'Copier'}
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
-      <form onSubmit={create} className="grid gap-3 sm:grid-cols-2">
+      <form onSubmit={create} className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
         <Field label="Durée de validité" htmlFor="l-duration">
           <Select id="l-duration" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })}>
             {DURATIONS.map((d) => (
@@ -235,7 +241,7 @@ function LinksTab({ target, onChanged }: { target: ShareTarget; onChanged: () =>
           </Select>
         </Field>
         <Field label="Téléchargements maximum" htmlFor="l-max">
-          <Input id="l-max" type="number" min={1} max={1000} placeholder="Illimité" value={form.maxDownloads} onChange={(e) => setForm({ ...form, maxDownloads: e.target.value })} />
+          <Input id="l-max" type="number" min={1} max={1000} placeholder="illimité" value={form.maxDownloads} onChange={(e) => setForm({ ...form, maxDownloads: e.target.value })} />
         </Field>
         <Field label="Mot de passe (facultatif)" htmlFor="l-password" hint="À transmettre par un autre canal que le lien.">
           <Input id="l-password" type="password" autoComplete="new-password" minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
@@ -245,26 +251,26 @@ function LinksTab({ target, onChanged }: { target: ShareTarget; onChanged: () =>
         </Field>
         <div className="sm:col-span-2">
           {error && <ErrorNote>{error}</ErrorNote>}
-          <Button type="submit" loading={pending} className="mt-1 w-full sm:w-auto">
-            <Link2 className="size-4" /> Créer le lien
+          <Button type="submit" loading={pending} className="mt-1">
+            Créer et sceller le lien
           </Button>
         </div>
       </form>
 
       <div>
-        <p className="mb-2 text-sm font-medium">Liens de cet élément</p>
-        <ul className="divide-y divide-line rounded-2xl border border-line">
-          {links.data?.length === 0 && <li className="px-4 py-5 text-center text-sm text-muted">Aucun lien pour l’instant.</li>}
+        <p className="mb-2 font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Liens de cet élément</p>
+        <ul className="border-t border-line-strong">
+          {links.data?.length === 0 && <li className="border-b border-line py-5 font-mono text-[12px] text-faint">— aucun lien pour l’instant.</li>}
           {links.data?.map((l) => (
-            <li key={l.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <li key={l.id} className={cx('flex flex-wrap items-center gap-3 border-b border-line py-3', l.state !== 'active' && 'opacity-60')}>
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-2 text-sm font-medium">
+                <p className="flex items-center gap-2 text-sm">
                   <span className="truncate">{l.label ?? 'Lien sans libellé'}</span>
-                  {l.protected && <KeyRound className="size-3.5 text-gold" aria-label="Protégé par mot de passe" />}
+                  {l.protected && <span className="font-mono text-[10px] text-seal">● MDP</span>}
                 </p>
                 <p className="mt-0.5 font-mono text-[11px] text-muted">
                   …{l.tokenHint} · {l.state === 'active' ? `expire ${timeAgo(l.expiresAt)}` : formatDateTime(l.expiresAt)} · {l.downloadCount}
-                  {l.maxDownloads ? `/${l.maxDownloads}` : ''} téléchargement(s)
+                  {l.maxDownloads ? `/${l.maxDownloads}` : ''} tél.
                 </p>
               </div>
               <Badge color={LINK_STATE_COLOR[l.state]}>{LINK_STATE_LABEL[l.state]}</Badge>

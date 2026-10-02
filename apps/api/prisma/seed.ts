@@ -104,7 +104,7 @@ async function main() {
   const passwordHash = await hashPassword(PASSWORD);
   const user = (email: string, name: string) => prisma.user.create({ data: { email, name, passwordHash } });
   const lea = await user('demo@safeshare.dev', 'Léa Martin');
-  const karim = await user('karim@safeshare.dev', 'Karim Benali');
+  const thomas = await user('thomas@safeshare.dev', 'Thomas Garnier');
   const sofia = await user('sofia@safeshare.dev', 'Sofia Rossi');
   await user('hugo@safeshare.dev', 'Hugo Lefèvre');
 
@@ -143,8 +143,8 @@ async function main() {
 
   await file('Accueil — version A.png', png(640, 400, [124, 92, 255], [20, 18, 40]), lea.id, maquettes.id, 27);
   await file('Accueil — version B.png', png(640, 400, [242, 181, 68], [30, 22, 12]), lea.id, maquettes.id, 26);
-  // Importé par Karim, qui peut modifier ce dossier : le fichier appartient quand même à Léa.
-  await file('Parcours mobile.png', png(360, 720, [61, 219, 200], [12, 30, 40]), lea.id, maquettes.id, 18, karim.id);
+  // Importé par Thomas, qui peut modifier ce dossier : le fichier appartient quand même à Léa.
+  await file('Parcours mobile.png', png(360, 720, [61, 219, 200], [12, 30, 40]), lea.id, maquettes.id, 18, thomas.id);
   await file(
     'Cahier des charges.pdf',
     pdf('Refonte du site - cahier des charges', ['Objectif : un site plus rapide et accessible.', 'Livraison : printemps 2027.', 'Budget : voir Budget previsionnel.csv']),
@@ -158,7 +158,7 @@ async function main() {
 # Réunion de lancement — refonte 2027
 
 - Priorité : l'accessibilité (RGAA) et le temps de chargement mobile.
-- Karim prend les maquettes, Sofia relit les textes.
+- Thomas prend les maquettes, Sofia relit les textes.
 - Prochain point : dans deux semaines.
 `),
     lea.id,
@@ -175,17 +175,17 @@ async function main() {
   await file('Séminaire — atelier.png', png(800, 500, [90, 160, 255], [10, 20, 60]), lea.id, photos.id, 11);
   await file('À lire en premier.txt', Buffer.from('Bienvenue sur SafeShare.\nGlissez des fichiers dans cette fenêtre pour les importer.\n', 'utf8'), lea.id, null, 40);
 
-  // Espace de Karim, dont un fichier partagé avec Léa.
-  const budget = await folder('Budget', karim.id, null, 15);
-  const budgetFile = await file('Budget prévisionnel.csv', csv([['Poste', 'Montant'], ['Design', 8000], ['Développement', 21000], ['Hébergement', 1200]]), karim.id, budget.id, 14);
-  await file('Devis hébergeur.pdf', pdf('Devis hebergement', ['Offre annuelle : 1200 EUR']), karim.id, budget.id, 13);
+  // Espace de Thomas, dont un fichier partagé avec Léa.
+  const budget = await folder('Budget', thomas.id, null, 15);
+  const budgetFile = await file('Budget prévisionnel.csv', csv([['Poste', 'Montant'], ['Design', 8000], ['Développement', 21000], ['Hébergement', 1200]]), thomas.id, budget.id, 14);
+  await file('Devis hébergeur.pdf', pdf('Devis hebergement', ['Offre annuelle : 1200 EUR']), thomas.id, budget.id, 13);
 
   // Partages nominatifs.
   const share = (userId: string, role: ShareRole, grantedById: string, target: { folderId?: string; fileId?: string }, days: number) =>
     prisma.share.create({ data: { userId, role, grantedById, ...target, createdAt: ago(days) } });
-  await share(karim.id, 'EDITOR', lea.id, { folderId: refonte.id }, 29);
+  await share(thomas.id, 'EDITOR', lea.id, { folderId: refonte.id }, 29);
   await share(sofia.id, 'VIEWER', lea.id, { folderId: refonte.id }, 24);
-  await share(lea.id, 'VIEWER', karim.id, { fileId: budgetFile.id }, 14);
+  await share(lea.id, 'VIEWER', thomas.id, { fileId: budgetFile.id }, 14);
 
   // Liens dans tous les états, pour voir chaque cas dans l'interface.
   const link = async (data: { folderId?: string; fileId?: string; expiresAt: Date; password?: string; maxDownloads?: number; downloadCount?: number; revokedAt?: Date; label?: string; days: number }) => {
@@ -217,9 +217,9 @@ async function main() {
   // Journal d'activité.
   const log = (action: string, actorId: string | null, targetName: string, targetType: string, days: number, details?: string) =>
     prisma.activity.create({ data: { action, ownerId: lea.id, actorId, targetName, targetType, details, ip: actorId ? '192.0.2.10' : '198.51.100.7', createdAt: ago(days) } });
-  await log('share.grant', lea.id, 'Refonte site 2027', 'folder', 29, 'Karim Benali (modification)');
+  await log('share.grant', lea.id, 'Refonte site 2027', 'folder', 29, 'Thomas Garnier (modification)');
   await log('share.grant', lea.id, 'Refonte site 2027', 'folder', 24, 'Sofia Rossi (lecture)');
-  await log('upload', karim.id, 'Parcours mobile.png', 'file', 18);
+  await log('upload', thomas.id, 'Parcours mobile.png', 'file', 18);
   await log('download', sofia.id, 'Cahier des charges.pdf', 'file', 6);
   await log('link.create', lea.id, 'Livrables client', 'folder', 1, 'protégé par mot de passe');
   await log('link.password_failed', null, 'Livrables client', 'link', 0.8, 'lien protégé');
@@ -229,7 +229,7 @@ async function main() {
 
   await rm(tmp, { recursive: true, force: true });
   console.log(`SafeShare : 4 comptes, ${await prisma.folder.count()} dossiers, ${await prisma.file.count()} fichiers, ${await prisma.link.count()} liens.`);
-  console.log(`Comptes (mot de passe ${PASSWORD}) : demo@safeshare.dev (Léa), karim@safeshare.dev, sofia@safeshare.dev, hugo@safeshare.dev`);
+  console.log(`Comptes (mot de passe ${PASSWORD}) : demo@safeshare.dev (Léa), thomas@safeshare.dev, sofia@safeshare.dev, hugo@safeshare.dev`);
   console.log(`Lien client (mot de passe client2027) : ${clientLink}`);
   console.log(`Lien photos (sans mot de passe)      : ${openLink}`);
 }

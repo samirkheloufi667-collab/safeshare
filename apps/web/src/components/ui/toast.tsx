@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { createContext, useCallback, useContext, useState } from 'react';
 
 interface Toast {
@@ -9,7 +9,7 @@ interface Toast {
 
 const ToastContext = createContext<(kind: Toast['kind'], text: string) => void>(() => undefined);
 
-/** Notifications éphémères en bas d'écran : confirmation d'une action ou erreur de l'API. */
+/** Notifications éphémères, comme une ligne de journal qui s'imprime en bas d'écran. */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -22,20 +22,23 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[2000] flex flex-col items-center gap-2 px-4" aria-live="polite">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className="pointer-events-auto flex max-w-md items-center gap-2 rounded-xl border border-line-strong bg-surface-2 px-4 py-3 text-sm font-medium text-fg shadow-xl shadow-black/50"
-          >
-            {t.kind === 'success' ? (
-              <CircleCheck className="size-4 shrink-0 text-ok" />
-            ) : (
-              <CircleX className="size-4 shrink-0 text-danger" />
-            )}
-            {t.text}
-          </div>
-        ))}
+      <div className="pointer-events-none fixed bottom-4 left-4 z-[2000] flex flex-col gap-2 pr-4" aria-live="polite">
+        <AnimatePresence initial={false}>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              layout
+              initial={{ clipPath: 'inset(0 100% 0 0)' }}
+              animate={{ clipPath: 'inset(0 0% 0 0)' }}
+              exit={{ opacity: 0, x: -12 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              className="pointer-events-auto flex max-w-md items-baseline gap-3 border border-line-strong bg-surface-2 px-4 py-2.5 font-mono text-[13px]"
+            >
+              <span className={t.kind === 'success' ? 'text-fg' : 'text-seal'}>{t.kind === 'success' ? 'OK' : 'ERR'}</span>
+              <span className="text-muted">{t.text}</span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

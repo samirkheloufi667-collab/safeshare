@@ -1,7 +1,6 @@
-import { ChevronRight, HardDrive } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Modal } from '@/components/ui/modal';
-import { Button, ErrorNote, FolderMark, Spinner } from '@/components/ui/primitives';
+import { Button, ErrorNote, Spinner } from '@/components/ui/primitives';
 import { api, errorMessage } from '@/lib/api';
 import { cx } from '@/lib/format';
 import type { TreeFolder } from '@/lib/types';
@@ -15,9 +14,9 @@ export interface MoveTarget {
 }
 
 /**
- * Choix de la destination dans mon arborescence. Le dossier déplacé et tout
- * son contenu sont exclus de la liste : on ne peut pas ranger un dossier dans
- * lui-même (l'API le refuse aussi).
+ * Choix de la destination dans mon arborescence, dessinée comme la sortie de
+ * la commande `tree`. Le dossier déplacé et tout son contenu sont exclus : on
+ * ne peut pas ranger un dossier dans lui-même (l'API le refuse aussi).
  */
 export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget | null; onClose: () => void; onMoved: () => void }) {
   const tree = useApi<TreeFolder[]>(target ? '/folders-tree' : null);
@@ -29,15 +28,16 @@ export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget | 
     const all = tree.data ?? [];
     const children = new Map<string | null, TreeFolder[]>();
     all.forEach((f) => children.set(f.parentId, [...(children.get(f.parentId) ?? []), f]));
-    const out: { folder: TreeFolder; depth: number }[] = [];
-    const walk = (parentId: string | null, depth: number) => {
-      for (const f of children.get(parentId) ?? []) {
-        if (target?.kind === 'folder' && f.id === target.id) continue; // exclut le dossier et sa descendance
-        out.push({ folder: f, depth });
-        walk(f.id, depth + 1);
-      }
+    const out: { folder: TreeFolder; prefix: string }[] = [];
+    const walk = (parentId: string | null, prefix: string) => {
+      const list = (children.get(parentId) ?? []).filter((f) => !(target?.kind === 'folder' && f.id === target.id));
+      list.forEach((f, i) => {
+        const last = i === list.length - 1;
+        out.push({ folder: f, prefix: prefix + (last ? '└─ ' : '├─ ') });
+        walk(f.id, prefix + (last ? '   ' : '│  '));
+      });
     };
-    walk(null, 0);
+    walk(null, '');
     return out;
   }, [tree.data, target]);
 
@@ -57,21 +57,17 @@ export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget | 
     }
   }
 
-  const option = (id: string | null, label: React.ReactNode, depth: number, key: string) => (
+  const option = (id: string | null, prefix: string, label: string, key: string) => (
     <li key={key}>
       <button
         type="button"
         onClick={() => setSelected(id)}
         aria-pressed={selected === id}
         disabled={id === target?.currentParentId}
-        className={cx(
-          'flex w-full items-center gap-2.5 rounded-lg py-2 pr-3 text-left text-sm transition-colors disabled:opacity-40',
-          selected === id ? 'bg-gold-soft text-gold' : 'hover:bg-surface-2',
-        )}
-        style={{ paddingLeft: 12 + depth * 18 }}
+        className={cx('flex w-full items-center px-3 py-1.5 text-left font-mono text-[13px] whitespace-pre transition-colors disabled:opacity-35', selected === id ? 'bg-fg text-ink' : 'hover:bg-surface-2')}
       >
-        {depth > 0 && <ChevronRight className="size-3 text-faint" />}
-        {label}
+        <span className={selected === id ? 'text-ink/50' : 'text-faint'}>{prefix}</span>
+        <span className="truncate">{label}</span>
       </button>
     </li>
   );
@@ -81,25 +77,9 @@ export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget | 
       {tree.loading && !tree.data ? (
         <Spinner />
       ) : (
-        <ul className="max-h-80 overflow-y-auto rounded-xl border border-line p-1.5">
-          {option(
-            null,
-            <>
-              <HardDrive className="size-4 text-gold" /> Mes fichiers (racine)
-            </>,
-            0,
-            'root',
-          )}
-          {rows.map(({ folder, depth }) =>
-            option(
-              folder.id,
-              <>
-                <FolderMark size={22} /> <span className="truncate">{folder.name}</span>
-              </>,
-              depth + 1,
-              folder.id,
-            ),
-          )}
+        <ul className="max-h-80 overflow-y-auto border border-line-strong py-1.5">
+          {option(null, '', '~/ (racine)', 'root')}
+          {rows.map(({ folder, prefix }) => option(folder.id, prefix, `${folder.name}/`, folder.id))}
         </ul>
       )}
       {error && (
@@ -107,12 +87,12 @@ export function MoveDialog({ target, onClose, onMoved }: { target: MoveTarget | 
           <ErrorNote>{error}</ErrorNote>
         </div>
       )}
-      <div className="mt-5 flex justify-end gap-2">
-        <Button variant="ghost" onClick={onClose}>
-          Annuler
-        </Button>
+      <div className="mt-5 flex gap-2">
         <Button onClick={move} loading={pending} disabled={selected === target?.currentParentId}>
           Déplacer ici
+        </Button>
+        <Button variant="ghost" onClick={onClose}>
+          Annuler
         </Button>
       </div>
     </Modal>

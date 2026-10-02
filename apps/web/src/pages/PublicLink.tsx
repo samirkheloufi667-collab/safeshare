@@ -1,8 +1,8 @@
-import { Clock, Download, FolderOpen, KeyRound, Lock, ShieldCheck, ShieldX } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import { Logo } from '@/components/AppShell';
-import DecryptedText from '@/components/reactbits/DecryptedText';
+import { Copyright, Logo } from '@/components/AppShell';
+import { Scramble } from '@/components/motion/Scramble';
+import { Seal } from '@/components/motion/Seal';
 import { Button, ErrorNote, Field, FileMark, Input, Spinner } from '@/components/ui/primitives';
 import { API_URL, ApiError, errorMessage } from '@/lib/api';
 import { formatBytes, formatDateTime, timeAgo } from '@/lib/format';
@@ -73,89 +73,86 @@ export default function PublicLink() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center bg-[radial-gradient(50rem_24rem_at_50%_-8%,rgba(242,181,68,0.12),transparent)] px-4 py-10">
-      <Logo />
-      <div className="mt-10 w-full max-w-xl">
+    <div className="flex min-h-svh flex-col px-4 py-6 sm:px-8">
+      <div className="mx-auto flex w-full max-w-3xl items-center justify-between">
+        <Logo />
+        <span className="font-mono text-[11px] tracking-[0.12em] text-faint uppercase">Lien de partage</span>
+      </div>
+
+      <div className="mx-auto mt-14 w-full max-w-3xl flex-1">
         {error && (
-          <div className="rounded-3xl border border-line bg-surface p-8 text-center">
-            <ShieldX className="mx-auto size-10 text-danger" />
-            <h1 className="mt-4 font-display text-2xl font-bold">Lien indisponible</h1>
-            <p className="mt-2 text-sm text-muted">{error}</p>
+          <div className="border border-line-strong p-8">
+            <p className="font-mono text-[11px] tracking-[0.12em] text-seal uppercase">Accès refusé</p>
+            <h1 className="display mt-3 text-3xl">Lien indisponible.</h1>
+            <p className="mt-3 text-sm text-muted">{error}</p>
           </div>
         )}
         {!data && !error && <Spinner />}
 
         {data && data.state !== 'active' && (
-          <div className="rounded-3xl border border-line bg-surface p-8 text-center">
-            <Clock className="mx-auto size-10 text-warn" />
-            <h1 className="mt-4 font-display text-2xl font-bold">{data.name}</h1>
-            <p className="mt-2 text-sm text-muted">{data.message}</p>
-            <p className="mt-4 text-xs text-faint">Demandez un nouveau lien à {data.sharedBy}.</p>
+          <div className="border border-line-strong p-8">
+            <p className="font-mono text-[11px] tracking-[0.12em] text-seal uppercase">Sceau rompu</p>
+            <h1 className="display mt-3 text-3xl break-words line-through decoration-seal">{data.name}</h1>
+            <p className="mt-3 text-sm text-muted">{data.message}</p>
+            <p className="mt-6 font-mono text-[12px] text-faint">→ demandez un nouveau lien à {data.sharedBy}.</p>
           </div>
         )}
 
         {data && data.state === 'active' && (
-          <div className="overflow-hidden rounded-3xl border border-line bg-surface">
-            <div className="border-b border-line p-6 sm:p-8">
-              <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.14em] text-gold uppercase">
-                <ShieldCheck className="size-3.5" /> Partage sécurisé
-              </p>
-              <h1 className="mt-3 font-display text-2xl font-bold break-words sm:text-3xl">
-                <DecryptedText text={data.name} animateOn="view" sequential speed={25} encryptedClassName="text-gold/60" />
-              </h1>
-              <p className="mt-2 text-sm text-muted">
-                Partagé par <strong className="text-fg">{data.sharedBy}</strong>
-                {data.label ? ` — ${data.label}` : ''}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
-                <span className="flex items-center gap-1.5">
-                  <Clock className="size-3.5" /> Expire {timeAgo(data.expiresAt)} ({formatDateTime(data.expiresAt)})
-                </span>
-                {data.remainingDownloads !== null && (
-                  <span className="flex items-center gap-1.5">
-                    <Download className="size-3.5" /> {data.remainingDownloads} téléchargement(s) restant(s)
-                  </span>
-                )}
-                {data.protected && (
-                  <span className="flex items-center gap-1.5">
-                    <KeyRound className="size-3.5" /> Protégé par mot de passe
-                  </span>
-                )}
+          <div className="border border-line-strong">
+            <div className="flex flex-col gap-6 border-b border-line-strong p-6 sm:flex-row sm:items-start sm:p-8">
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">
+                  {data.kind === 'folder' ? 'Dossier' : 'Fichier'} partagé par <span className="text-fg">{data.sharedBy}</span>
+                </p>
+                <Scramble as="h1" text={data.name} duration={1} chars="abcdefghijklmnopqrstuvwxyz0123456789" className="display mt-3 block text-3xl leading-tight break-words sm:text-4xl" />
+                {data.label && <p className="mt-2 text-muted">{data.label}</p>}
+                <dl className="mt-6 grid gap-x-6 gap-y-1 font-mono text-[12px] sm:grid-cols-[auto_1fr]">
+                  <dt className="text-faint">expire</dt>
+                  <dd>
+                    {timeAgo(data.expiresAt)} <span className="text-faint">({formatDateTime(data.expiresAt)})</span>
+                  </dd>
+                  {data.remainingDownloads !== null && (
+                    <>
+                      <dt className="text-faint">restant</dt>
+                      <dd>{data.remainingDownloads} téléchargement(s)</dd>
+                    </>
+                  )}
+                  <dt className="text-faint">protection</dt>
+                  <dd>{data.protected ? (data.unlocked ? 'mot de passe — déverrouillé' : 'mot de passe') : 'aucune'}</dd>
+                </dl>
               </div>
+              {/* Le sceau tombe quand le contenu devient accessible. */}
+              <Seal key={String(data.unlocked)} size={110} stamp={data.unlocked} label="SAFESHARE · LIEN SCELLÉ · " />
             </div>
 
             {!data.unlocked ? (
-              <form onSubmit={unlock} className="flex flex-col gap-4 p-6 sm:p-8">
-                <p className="flex items-center gap-2 text-sm">
-                  <Lock className="size-4 text-gold" /> Saisissez le mot de passe communiqué par {data.sharedBy}.
-                </p>
+              <form onSubmit={unlock} className="flex flex-col gap-5 p-6 sm:p-8">
+                <p className="text-sm text-muted">Saisissez le mot de passe communiqué par {data.sharedBy}. Chaque tentative est inscrite dans son journal.</p>
                 {unlockError && <ErrorNote>{unlockError}</ErrorNote>}
                 <Field label="Mot de passe" htmlFor="link-password">
                   <Input id="link-password" type="password" required autoFocus value={password} onChange={(e) => setPassword(e.target.value)} />
                 </Field>
-                <Button type="submit" size="lg" loading={pending}>
-                  Déverrouiller
+                <Button type="submit" size="lg" loading={pending} className="self-start">
+                  Rompre le sceau
                 </Button>
               </form>
             ) : (
-              <ul className="divide-y divide-line">
-                {data.files?.length === 0 && (
-                  <li className="flex items-center gap-2 p-6 text-sm text-muted">
-                    <FolderOpen className="size-4" /> Ce dossier est vide.
-                  </li>
-                )}
+              <ul>
+                {data.files?.length === 0 && <li className="p-6 font-mono text-[12px] text-faint">— ce dossier est vide.</li>}
                 {data.files?.map((f) => (
-                  <li key={f.id} className="flex items-center gap-3 px-5 py-3.5 sm:px-8">
-                    <FileMark mime={f.mimeType} name={f.name} size={38} />
+                  <li key={f.id} className="flex items-center gap-4 border-b border-line px-6 py-3.5 last:border-b-0 sm:px-8">
+                    <FileMark mime={f.mimeType} name={f.name} size={34} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{f.name}</p>
-                      <p className="truncate text-xs text-muted">
-                        <span className="font-mono">{formatBytes(f.size)}</span>
+                      <p className="truncate text-[14px]">{f.name}</p>
+                      <p className="truncate font-mono text-[11px] text-muted">
+                        {formatBytes(f.size)}
                         {data.kind === 'folder' && f.path ? ` · ${f.path}` : ''}
+                        {f.sha256 ? ` · sha256 ${f.sha256.slice(0, 12)}…` : ''}
                       </p>
                     </div>
-                    <a href={downloadUrl(f.id)} rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-gold px-3 text-[13px] font-semibold text-ink hover:bg-gold-strong">
-                      <Download className="size-4" /> <span className="hidden sm:inline">Télécharger</span>
+                    <a href={downloadUrl(f.id)} rel="noopener noreferrer" className="inline-flex h-9 items-center bg-fg px-3 font-mono text-[11px] font-semibold tracking-[0.08em] text-ink uppercase transition-colors hover:bg-seal-strong">
+                      Télécharger
                     </a>
                   </li>
                 ))}
@@ -163,8 +160,9 @@ export default function PublicLink() {
             )}
           </div>
         )}
-        <p className="mt-6 text-center text-xs text-faint">SafeShare — projet de démonstration. Les téléchargements sont enregistrés dans le journal du propriétaire.</p>
+        <p className="mt-6 font-mono text-[11px] text-faint">Les téléchargements sont enregistrés dans le journal du propriétaire.</p>
       </div>
+      <Copyright className="mx-auto mt-12 w-full max-w-3xl" />
     </div>
   );
 }

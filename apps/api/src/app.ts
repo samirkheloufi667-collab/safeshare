@@ -65,6 +65,8 @@ export function createApp() {
   // Production : l'API sert aussi l'interface compilée (application monopage).
   const webDist = config.webDist;
   if (webDist) {
+    // Les fichiers de /assets ont une empreinte dans leur nom (Vite) : gardés un an.
+    app.use('/assets', express.static(join(webDist, 'assets'), { immutable: true, maxAge: '1y' }));
     app.use(express.static(webDist, { index: false, maxAge: '1h' }));
     app.get(/^\/(?!api\/).*/, (_req, res) => {
       res.setHeader('Cache-Control', 'no-cache');

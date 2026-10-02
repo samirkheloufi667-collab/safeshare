@@ -1,5 +1,5 @@
-import { Download, LogOut, Users } from 'lucide-react';
 import { Link } from 'react-router';
+import { Stagger } from '@/components/motion/Stagger';
 import { Badge, EmptyState, ErrorNote, FileMark, FolderMark, PageHeader, Spinner } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
 import { api, downloadFile, errorMessage } from '@/lib/api';
@@ -22,48 +22,46 @@ export default function Shared() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Partagés avec moi" subtitle="Les dossiers et fichiers que d’autres personnes vous ont ouverts." />
+    <div className="flex flex-col gap-8">
+      <PageHeader path="~/partages" title="Partagés avec moi" subtitle="Ce que d’autres personnes vous ont ouvert, avec les droits qu’elles vous ont donnés." />
       {shared.error && <ErrorNote>{shared.error}</ErrorNote>}
       {shared.loading && !shared.data && <Spinner />}
-      {shared.data?.length === 0 && (
-        <EmptyState icon={<Users className="size-5" />} title="Rien pour l’instant" text="Quand quelqu’un vous partage un dossier ou un fichier, il apparaît ici." />
-      )}
+      {shared.data?.length === 0 && <EmptyState title="Rien pour l’instant." text="Quand quelqu’un vous partage un dossier ou un fichier, il apparaît ici." />}
       {shared.data && shared.data.length > 0 && (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
-          {shared.data.map((s) => (
-            <li key={s.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+        <Stagger as="ul" watch={shared.data.length} className="border-t border-line-strong">
+          {shared.data.map((s, i) => (
+            <li key={s.id} data-reveal className="group flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-2 py-3 transition-colors hover:bg-surface-2">
+              <span className="w-8 font-mono text-[11px] text-faint">{String(i + 1).padStart(3, '0')}</span>
               {s.folder ? (
-                <Link to={`/drive/${s.folder.id}`} className="flex min-w-0 flex-1 items-center gap-3 hover:text-gold">
-                  <FolderMark size={36} shared />
+                <Link to={`/drive/${s.folder.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <FolderMark size={30} shared />
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{s.folder.name}</span>
-                    <span className="block text-xs text-muted">
-                      {s.folder.itemCount} élément(s) · par {s.grantedBy} · {timeAgo(s.sharedAt)}
+                    <span className="block truncate text-[14px] group-hover:underline">{s.folder.name}/</span>
+                    <span className="block font-mono text-[11px] text-muted">
+                      {s.folder.itemCount} élément(s) · de {s.grantedBy} · {timeAgo(s.sharedAt)}
                     </span>
                   </span>
                 </Link>
               ) : (
                 s.file && (
-                  <button type="button" onClick={() => downloadFile(s.file!.id).catch((e) => toast('error', errorMessage(e)))} className="flex min-w-0 flex-1 items-center gap-3 text-left hover:text-gold">
-                    <FileMark mime={s.file.mimeType} name={s.file.name} size={36} />
+                  <button type="button" onClick={() => downloadFile(s.file!.id).catch((e) => toast('error', errorMessage(e)))} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <FileMark mime={s.file.mimeType} name={s.file.name} size={30} />
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium">{s.file.name}</span>
-                      <span className="block text-xs text-muted">
-                        {formatBytes(s.file.size)} · par {s.grantedBy} · {timeAgo(s.sharedAt)}
+                      <span className="block truncate text-[14px] group-hover:underline">{s.file.name}</span>
+                      <span className="block font-mono text-[11px] text-muted">
+                        {formatBytes(s.file.size)} · de {s.grantedBy} · {timeAgo(s.sharedAt)} · cliquer pour télécharger
                       </span>
                     </span>
-                    <Download className="size-4 shrink-0 text-muted" />
                   </button>
                 )
               )}
-              <Badge color="var(--color-gold)">{ROLE_LABEL[s.role]}</Badge>
-              <button type="button" onClick={() => leave(s)} className="rounded-lg p-2 text-muted hover:bg-danger/10 hover:text-danger" aria-label="Quitter ce partage" title="Quitter ce partage">
-                <LogOut className="size-4" />
+              <Badge color={s.role === 'EDITOR' ? 'var(--color-fg)' : 'var(--color-muted)'}>{ROLE_LABEL[s.role]}</Badge>
+              <button type="button" onClick={() => leave(s)} className="u-link font-mono text-[11px] tracking-[0.08em] text-muted uppercase hover:text-seal" title="Quitter ce partage">
+                Quitter
               </button>
             </li>
           ))}
-        </ul>
+        </Stagger>
       )}
     </div>
   );

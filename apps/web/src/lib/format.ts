@@ -56,10 +56,10 @@ export const LINK_STATE_LABEL: Record<LinkState, string> = {
 };
 
 export const LINK_STATE_COLOR: Record<LinkState, string> = {
-  active: 'var(--color-ok)',
+  active: 'var(--color-fg)',
   expired: 'var(--color-faint)',
-  revoked: 'var(--color-danger)',
-  exhausted: 'var(--color-warn)',
+  revoked: 'var(--color-seal)',
+  exhausted: 'var(--color-muted)',
 };
 
 export const DURATIONS = [
