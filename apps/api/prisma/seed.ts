@@ -83,7 +83,10 @@ const md = (s: string) => Buffer.from(s.trim() + '\n', 'utf8');
 /* ---------------------------------------------------------------- script */
 
 async function main() {
-  if (process.env.NODE_ENV === 'production') throw new Error('Refus de charger des données de démonstration en production');
+  // En production, seulement pour une démo publique qui se réinitialise à chaque démarrage.
+  if (process.env.NODE_ENV === 'production' && process.env.DEMO_MODE !== 'true') {
+    throw new Error('Refus de charger des données de démonstration en production');
+  }
 
   await prisma.$transaction([
     prisma.activity.deleteMany(),

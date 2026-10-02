@@ -284,7 +284,8 @@ driveRouter.post('/files', upload.array('files'), async (req: Request, res) => {
     const owner = await prisma.user.findUniqueOrThrow({ where: { id: ownerId }, select: { quotaBytes: true } });
     const used = (await prisma.file.aggregate({ where: { ownerId }, _sum: { size: true } }))._sum.size ?? 0n;
     const adding = incoming.reduce((sum, f) => sum + BigInt(f.size), 0n);
-    if (used + adding > owner.quotaBytes) {
+    const quota = config.demo && owner.quotaBytes > config.demoQuotaBytes ? config.demoQuotaBytes : owner.quotaBytes;
+    if (used + adding > quota) {
       throw new HttpError(413, 'Espace de stockage insuffisant pour ces fichiers');
     }
 

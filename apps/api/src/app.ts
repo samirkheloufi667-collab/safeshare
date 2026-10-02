@@ -1,6 +1,7 @@
 import cookieParser from 'cookie-parser';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import helmet from 'helmet';
+import { join } from 'node:path';
 import { config } from './lib/config';
 import { errorHandler, notFound } from './lib/errors';
 import { prisma } from './lib/prisma';
@@ -33,7 +34,8 @@ function cors(req: Request, res: Response, next: NextFunction) {
 
 export function createApp() {
   const app = express();
-  app.set('trust proxy', 'loopback');
+  // Derrière le proxy de l'hébergeur, l'adresse IP réelle est dans X-Forwarded-For (limiteur, journal).
+  app.set('trust proxy', config.production ? 1 : 'loopback');
   // Tailles et quotas sont des BigInt en base : JSON ne sait pas les écrire tels quels.
   app.set('json replacer', (_key: string, value: unknown) => (typeof value === 'bigint' ? Number(value) : value));
   app.disable('x-powered-by');
@@ -57,6 +59,18 @@ export function createApp() {
   app.use('/api', downloadRouter);
   app.use('/api', driveRouter);
   app.use('/api', sharingRouter);
+
+  app.use('/api', (_req, _res, next) => next(notFound('Route inconnue')));
+
+  // Production : l'API sert aussi l'interface compilée (application monopage).
+  const webDist = config.webDist;
+  if (webDist) {
+    app.use(express.static(webDist, { index: false, maxAge: '1h' }));
+    app.get(/^\/(?!api\/).*/, (_req, res) => {
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(join(webDist, 'index.html'));
+    });
+  }
 
   app.use((_req, _res, next) => next(notFound('Route inconnue')));
   app.use(errorHandler);

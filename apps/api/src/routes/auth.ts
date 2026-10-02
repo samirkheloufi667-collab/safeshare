@@ -61,6 +61,9 @@ async function openSession(res: Response, user: { id: string; email: string }, f
 }
 
 authRouter.post('/register', async (req, res) => {
+  if (config.demo) {
+    throw new HttpError(403, 'Les inscriptions sont fermées sur la démo publique : utilisez un compte de démonstration.');
+  }
   const body = parse(registerSchema, req.body);
   if (await prisma.user.findUnique({ where: { email: body.email } })) {
     throw conflict('Un compte existe déjà avec cet e-mail');

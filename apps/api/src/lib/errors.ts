@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from 'express';
 import multer from 'multer';
 import { ZodError } from 'zod';
+import { config } from './config';
 
 /** Erreur prévue : son statut et son message sont renvoyés tels quels au client. */
 export class HttpError extends Error {
@@ -37,7 +38,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof multer.MulterError) {
     const message =
       err.code === 'LIMIT_FILE_SIZE'
-        ? 'Fichier trop volumineux (100 Mo maximum)'
+        ? `Fichier trop volumineux (${config.maxFileBytes / 1024 / 1024} Mo maximum)`
         : err.code === 'LIMIT_FILE_COUNT'
           ? 'Trop de fichiers en un seul envoi (20 maximum)'
           : 'Envoi de fichier invalide';
